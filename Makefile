@@ -1,7 +1,7 @@
 # all need run on aarch host
 VERSION = $(shell cat Dockerfile.version | grep "^FROM " | sed -e "s/FROM.*:v\{0,\}//g" )
-GH_REPO ?= resf/istio
-HUB ?= ghcr.io/$(GH_REPO)
+GH_REPO ?= ac427
+HUB ?= anantac
 
 # version tag or branch
 # examples: make xxx TAG=1.11.0
@@ -66,14 +66,15 @@ patch.gn:
 # Build envoy
 # /tmp/bazel here should must be link here, cause, bazel-out is symlink to TEST_TMPDIR
 build.envoy: cleanup.proxy clone.proxy prepare.envoy
-	docker pull $(HUB)/build-tools-proxy:$(BUILD_TOOLS_VERSION)
+	docker pull $(HUB)/build-tools-proxy:$(BUILD_TOOLS_VERSION)-amd64
 	docker run \
 		-v=/tmp/bazel/$(RELEASE_BRANCH):/tmp/bazel/$(RELEASE_BRANCH) \
 		-e=TEST_TMPDIR=/tmp/bazel/$(RELEASE_BRANCH) \
+		-e=GOEXPERIMENT=boringcrypto \
 		-v=$(ENVOY_DIR):/tmp/envoy \
 		-v=$(TEMP_ROOT)/proxy:/go/src/istio/proxy \
 		-w=/go/src/istio/proxy \
-		$(BUILD_TOOLS_PROXY_IMAGE) make build_envoy BAZEL_BUILD_ARGS="--override_repository=envoy=/tmp/envoy"
+		$(BUILD_TOOLS_PROXY_IMAGE)-amd64 make build_envoy BAZEL_BUILD_ARGS="--define boringssl=fips --override_repository=envoy=/tmp/envoy"
 	mkdir -p $(TEMP_ROOT)/envoy-linux-arm64 && cp $(TEMP_ROOT)/proxy/bazel-bin/src/envoy/envoy $(TEMP_ROOT)/envoy-linux-arm64/envoy
 
 cleanup.istio:
